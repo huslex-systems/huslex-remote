@@ -1,5 +1,7 @@
 {
   "app-name": "Dytech Remote",
+  "conn-type": "incoming",
+  "disable-settings": "Y",
   "override-settings": {
     "approve-mode": "password",
     "verification-method": "use-permanent-password",
