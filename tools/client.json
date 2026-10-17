@@ -1,0 +1,8 @@
+{
+  "app-name": "Dytech Remote",
+  "override-settings": {
+    "approve-mode": "password",
+    "verification-method": "use-permanent-password",
+    "allow-remote-config-modification": "N"
+  }
+}
