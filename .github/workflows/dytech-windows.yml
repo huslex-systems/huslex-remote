@@ -337,10 +337,12 @@ jobs:
       - name: Build self-extracted executable
         shell: bash
         run: |
+          # The installer expects the main exe to be named like the app (app-name in custom.txt)
+          mv ./rustdesk/rustdesk.exe ./rustdesk/Dytech-Remote.exe
           sed -i '/dpiAware/d' res/manifest.xml
           pushd ./libs/portable
           pip3 install -r requirements.txt
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/Dytech-Remote.exe
           popd
           mkdir -p ./SignOutput
           mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/dytech-remote-${{ env.VERSION }}.exe
@@ -359,9 +361,10 @@ jobs:
       - name: Build self-extracted executable (console)
         shell: bash
         run: |
+          mv ./rustdesk/Dytech-Remote.exe ./rustdesk/Dytech-Remote-Console.exe
           pushd ./libs/portable
           rm -f ../../target/release/rustdesk-portable-packer.exe
-          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/rustdesk.exe
+          python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/Dytech-Remote-Console.exe
           popd
           mkdir -p ./SignOutput
           mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/dytech-remote-cpanel-${{ env.VERSION }}.exe
