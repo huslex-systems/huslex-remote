@@ -2610,6 +2610,15 @@ class _AboutState extends State<_About> {
                     translate('Website'),
                     style: linkStyle,
                   ).marginSymmetric(vertical: 4.0)),
+              InkWell(
+                  onTap: () {
+                    launchUrlString(
+                        'https://github.com/huslex-systems/huslex-remote');
+                  },
+                  child: Text(
+                    translate('Source code'),
+                    style: linkStyle,
+                  ).marginSymmetric(vertical: 4.0)),
               Container(
                 decoration: const BoxDecoration(color: Color(0xFF1D5FE6)),
                 padding:
@@ -2622,7 +2631,7 @@ class _AboutState extends State<_About> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '© ${DateTime.now().toString().substring(0, 4)} DYTECH\nBuilt on open-source software (AGPL-3.0).',
+                            '© ${DateTime.now().toString().substring(0, 4)} DYTECH\nBased on the open-source RustDesk project (AGPL-3.0).',
                             style: const TextStyle(color: Colors.white),
                           ),
                           Text(

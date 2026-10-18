@@ -15,6 +15,7 @@ import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/desktop/widgets/dytech_activate.dart';
 import 'package:flutter_hbb/desktop/widgets/dytech_console.dart';
+import 'package:flutter_hbb/desktop/widgets/dytech_quick.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
@@ -82,6 +83,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildLeftPane(BuildContext context) {
+    // Dytech: the console has its own branded sidebar instead of the stock tips.
+    if (bind.isOutgoingOnly()) return const DytechConsoleSidebar();
     final isIncomingOnly = bind.isIncomingOnly();
     final isOutgoingOnly = bind.isOutgoingOnly();
     final children = <Widget>[
@@ -136,7 +139,15 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               });
             }
           },
-        ).marginOnly(bottom: 6, right: 6)
+        ).marginOnly(bottom: 6, right: 6),
+        Padding(
+          padding: const EdgeInsets.only(left: 8, right: 14, bottom: 8),
+          child: Row(children: const [
+            DytechQuickBar(),
+            Spacer(),
+            DytechByLine(),
+          ]),
+        ),
       ]);
     }
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
