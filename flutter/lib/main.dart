@@ -431,9 +431,8 @@ class _AppState extends State<App> with WidgetsBindingObserver {
       final userPreference = MyTheme.getThemeModePreference();
       if (userPreference != ThemeMode.system) return;
       WidgetsBinding.instance.handlePlatformBrightnessChanged();
-      final systemIsDark =
-          WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-              Brightness.dark;
+      // Dytech: Auto follows sunrise/sunset, not the OS brightness.
+      final systemIsDark = dytechIsNight();
       final ThemeMode to;
       if (systemIsDark) {
         to = ThemeMode.dark;
@@ -449,10 +448,23 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     };
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) => _updateOrientation());
+    // Dytech: re-evaluate the Auto theme every 3 minutes (dusk / dawn).
+    _dytechThemeTimer = Timer.periodic(const Duration(minutes: 3), (_) {
+      try {
+        if (MyTheme.getThemeModePreference() != ThemeMode.system) return;
+        final wantDark = MyTheme.currentThemeMode() == ThemeMode.dark;
+        if (Get.isDarkMode == wantDark) return;
+        Get.changeThemeMode(wantDark ? ThemeMode.dark : ThemeMode.light);
+        updateSystemWindowTheme();
+      } catch (_) {}
+    });
   }
+
+  Timer? _dytechThemeTimer;
 
   @override
   void dispose() {
+    _dytechThemeTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

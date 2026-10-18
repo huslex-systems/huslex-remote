@@ -21,6 +21,16 @@ pub const LOCAL_ACTIVATE: &str = "dytech-activate";
 pub const LOCAL_STATUS: &str = "dytech-activate-status";
 pub const OPT_TOKEN: &str = "dytech-token";
 pub const OPT_STATION: &str = "dytech-station";
+/// "Y" while the panel reports the customer subscription as paused (set by the heartbeat).
+pub const OPT_SUSPENDED: &str = "dytech-suspended";
+/// Last plan state reported by the panel: free | trial | active | grace | paused.
+pub const OPT_STATE: &str = "dytech-state";
+
+/// True when incoming connections must be refused (checked at every login in server/connection.rs).
+/// Persisted in the service config, so it also holds across restarts and while the panel is unreachable.
+pub fn is_suspended() -> bool {
+    Config::get_option(OPT_SUSPENDED) == "Y"
+}
 
 fn set_status(v: &str) {
     LocalConfig::set_option(LOCAL_STATUS.to_owned(), v.to_owned());
@@ -121,7 +131,19 @@ fn beat() {
         .json(&json!({ "token": token }))
         .send()
     {
-        Ok(r) if r.status().is_success() => {}
+        Ok(r) if r.status().is_success() => {
+            // Panel answer: {"ok":true,"suspended":bool,"state":"free|trial|active|grace|paused"}.
+            // An old panel without these fields means "not suspended".
+            if let Ok(v) = r.json::<Value>() {
+                let suspended = v.get("suspended").and_then(|x| x.as_bool()).unwrap_or(false);
+                let state = v.get("state").and_then(|x| x.as_str()).unwrap_or("");
+                Config::set_option(
+                    OPT_SUSPENDED.to_owned(),
+                    if suspended { "Y" } else { "" }.to_owned(),
+                );
+                Config::set_option(OPT_STATE.to_owned(), state.to_owned());
+            }
+        }
         Ok(r) => log::warn!("dytech heartbeat rejected: {}", r.status()),
         Err(e) => log::debug!("dytech heartbeat failed: {}", e),
     }

@@ -3,6 +3,7 @@
 // and the synced service option `dytech-token` (set once the station is linked to the panel).
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 
 class DytechActivateCard extends StatefulWidget {
@@ -17,6 +18,7 @@ class _DytechActivateCardState extends State<DytechActivateCard> {
   final _ctrl = TextEditingController();
   Timer? _timer;
   bool _activated = true; // hidden until we know otherwise (avoids a flash)
+  bool _suspended = false;
   bool _busy = false;
   String _error = '';
 
@@ -39,6 +41,8 @@ class _DytechActivateCardState extends State<DytechActivateCard> {
     final status = bind.mainGetLocalOption(key: 'dytech-activate-status');
     if (!mounted) return;
     final activated = token.isNotEmpty;
+    final suspended = (await bind.mainGetOption(key: 'dytech-suspended')) == 'Y';
+    if (!mounted) return;
     var busy = _busy;
     var error = _error;
     if (status == 'busy') {
@@ -50,9 +54,10 @@ class _DytechActivateCardState extends State<DytechActivateCard> {
       busy = false;
       error = '';
     }
-    if (activated != _activated || busy != _busy || error != _error) {
+    if (activated != _activated || suspended != _suspended || busy != _busy || error != _error) {
       setState(() {
         _activated = activated;
+        _suspended = suspended;
         _busy = busy;
         _error = error;
       });
@@ -72,8 +77,33 @@ class _DytechActivateCardState extends State<DytechActivateCard> {
 
   @override
   Widget build(BuildContext context) {
-    if (_activated) return const Offstage();
     final scheme = Theme.of(context).colorScheme;
+    if (_activated && _suspended) {
+      return Container(
+        margin: const EdgeInsets.only(left: 20, right: 16, top: 8, bottom: 8),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: scheme.error.withOpacity(0.7)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(translate('Subscription paused'),
+                style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.error)),
+            const SizedBox(height: 4),
+            Text(
+                translate(
+                    'This station is paused because the subscription was not renewed. Contact your provider.'),
+                style: const TextStyle(fontSize: 12)),
+          ],
+        ),
+      );
+    }
+    if (_activated) return const Offstage();
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 16, top: 8, bottom: 8),
       padding: const EdgeInsets.all(14),
@@ -84,27 +114,27 @@ class _DytechActivateCardState extends State<DytechActivateCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Activate this station',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          Text(translate('Activate this station'),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          const Text('Enter the license key from Dytech Remote Center.',
-              style: TextStyle(fontSize: 12)),
+          Text(translate('Enter the license key from Dytech Remote Center.'),
+              style: const TextStyle(fontSize: 12)),
           const SizedBox(height: 10),
           TextField(
             controller: _ctrl,
             enabled: !_busy,
             autocorrect: false,
             enableSuggestions: false,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
                 isDense: true,
-                border: OutlineInputBorder(),
-                hintText: 'License key'),
+                border: const OutlineInputBorder(),
+                hintText: translate('License key')),
             onSubmitted: (_) => _submit(),
           ),
           if (_error.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text(_error,
+              child: Text(translate(_error),
                   style: TextStyle(fontSize: 12, color: scheme.error)),
             ),
           const SizedBox(height: 10),
@@ -112,7 +142,7 @@ class _DytechActivateCardState extends State<DytechActivateCard> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _busy ? null : _submit,
-              child: Text(_busy ? 'Activating…' : 'Activate'),
+              child: Text(translate(_busy ? 'Activating…' : 'Activate')),
             ),
           ),
         ],

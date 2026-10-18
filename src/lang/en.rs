@@ -110,7 +110,7 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Insecure Connection", "Insecure connection"),
         ("Dark Theme", "Dark theme"),
         ("Light Theme", "Light theme"),
-        ("Follow System", "Follow system"),
+        ("Follow System", "Auto (sunrise/sunset)"),
         ("Unlock Security Settings", "Unlock security settings"),
         ("Unlock Network Settings", "Unlock network settings"),
         ("Direct IP Access", "Direct IP access"),

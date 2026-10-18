@@ -2915,6 +2915,18 @@ impl Connection {
             if self.authorized {
                 return true;
             }
+            // Dytech: customer subscription paused in the panel -> refuse every incoming login.
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            {
+                if crate::dytech_panel::is_suspended() {
+                    self.send_login_error(
+                        "Subscription paused. Please contact your service provider.",
+                    )
+                    .await;
+                    sleep(1.).await;
+                    return false;
+                }
+            }
             self.reset_session_scope_for_login();
             if !self.check_id_whitelist().await {
                 return false;

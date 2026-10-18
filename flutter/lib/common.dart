@@ -245,6 +245,38 @@ class ColorThemeExtension extends ThemeExtension<ColorThemeExtension> {
   }
 }
 
+/// Dytech: true when it is dark outside in Romania (Bucharest, 44.43 N / 26.10 E): before sunrise or
+/// after sunset. Offline NOAA solar formula, computed in UTC so summer/winter time needs no handling.
+bool dytechIsNight([DateTime? at]) {
+  final u = (at ?? DateTime.now()).toUtc();
+  const double lat = 44.43;
+  const double lon = 26.10;
+  final n = u.difference(DateTime.utc(u.year, 1, 1)).inDays + 1;
+  final g = 2 * pi / 365 * (n - 1);
+  final eqt = 229.18 *
+      (0.000075 +
+          0.001868 * cos(g) -
+          0.032077 * sin(g) -
+          0.014615 * cos(2 * g) -
+          0.040849 * sin(2 * g));
+  final dec = 0.006918 -
+      0.399912 * cos(g) +
+      0.070257 * sin(g) -
+      0.006758 * cos(2 * g) +
+      0.000907 * sin(2 * g) -
+      0.002697 * cos(3 * g) +
+      0.00148 * sin(3 * g);
+  final la = lat * pi / 180;
+  double x = cos(90.833 * pi / 180) / (cos(la) * cos(dec)) - tan(la) * tan(dec);
+  if (x > 1.0) x = 1.0;
+  if (x < -1.0) x = -1.0;
+  final ha = acos(x) * 180 / pi;
+  final sunrise = 720 - 4 * (lon + ha) - eqt; // minutes after 00:00 UTC
+  final sunset = 720 - 4 * (lon - ha) - eqt;
+  final cur = u.hour * 60 + u.minute + u.second / 60;
+  return cur < sunrise || cur > sunset;
+}
+
 class MyTheme {
   MyTheme._();
 
@@ -581,7 +613,10 @@ class MyTheme {
   }
 
   static Future<void> changeDarkMode(ThemeMode mode) async {
-    Get.changeThemeMode(mode);
+    // Dytech: "system" = Auto by sunrise/sunset, resolved here instead of the OS brightness.
+    Get.changeThemeMode(mode == ThemeMode.system
+        ? (dytechIsNight() ? ThemeMode.dark : ThemeMode.light)
+        : mode);
     if (desktopType == DesktopType.main || isAndroid || isIOS || isWeb) {
       if (mode == ThemeMode.system) {
         await bind.mainSetLocalOption(
@@ -599,12 +634,8 @@ class MyTheme {
   static ThemeMode currentThemeMode() {
     final preference = getThemeModePreference();
     if (preference == ThemeMode.system) {
-      if (WidgetsBinding.instance.platformDispatcher.platformBrightness ==
-          Brightness.light) {
-        return ThemeMode.light;
-      } else {
-        return ThemeMode.dark;
-      }
+      // Dytech: Auto = light by day, navy at night (sunrise/sunset in Romania).
+      return dytechIsNight() ? ThemeMode.dark : ThemeMode.light;
     } else {
       return preference;
     }

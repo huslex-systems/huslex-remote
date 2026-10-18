@@ -1,0 +1,14 @@
+{
+  "app-name": "Dytech-Remote-Console",
+  "conn-type": "outgoing",
+  "override-settings": {
+    "custom-rendezvous-server": "remote.huslex.com",
+    "relay-server": "remote.huslex.com",
+    "key": "TGdRszJDeoEnaKFPXmF8KU0Y2Jp6bs618Z0KvBT2cMk=",
+    "hide-powered-by-me": "Y",
+    "enable-hwcodec": "N"
+  },
+  "default-settings": {
+    "lang": "en"
+  }
+}

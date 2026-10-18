@@ -1,0 +1,18 @@
+{
+  "app-name": "Dytech-Remote",
+  "conn-type": "incoming",
+  "override-settings": {
+    "custom-rendezvous-server": "remote.huslex.com",
+    "relay-server": "remote.huslex.com",
+    "key": "TGdRszJDeoEnaKFPXmF8KU0Y2Jp6bs618Z0KvBT2cMk=",
+    "hide-powered-by-me": "Y",
+    "enable-hwcodec": "N",
+    "approve-mode": "password",
+    "verification-method": "use-permanent-password",
+    "allow-remote-config-modification": "N",
+    "hide-stop-service": "Y"
+  },
+  "default-settings": {
+    "lang": "en"
+  }
+}
