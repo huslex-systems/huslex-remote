@@ -856,5 +856,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Something went wrong. Please try again in a moment.", "Ceva nu a mers. Încearcă din nou peste câteva momente."),
         ("Source code", "Cod sursă"),
         ("length>=6", "minim 6 caractere"),
+        ("License", "Licență"),
     ].iter().cloned().collect();
 }

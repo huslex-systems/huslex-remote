@@ -2619,6 +2619,15 @@ class _AboutState extends State<_About> {
                     translate('Source code'),
                     style: linkStyle,
                   ).marginSymmetric(vertical: 4.0)),
+              InkWell(
+                  onTap: () {
+                    launchUrlString(
+                        'https://www.gnu.org/licenses/agpl-3.0.html');
+                  },
+                  child: Text(
+                    translate('License'),
+                    style: linkStyle,
+                  ).marginSymmetric(vertical: 4.0)),
               Container(
                 decoration: const BoxDecoration(color: Color(0xFF1D5FE6)),
                 padding:
@@ -2631,8 +2640,9 @@ class _AboutState extends State<_About> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '© ${DateTime.now().toString().substring(0, 4)} DYTECH\nBased on the open-source RustDesk project (AGPL-3.0).',
-                            style: const TextStyle(color: Colors.white),
+                            '© ${DateTime.now().toString().substring(0, 4)} DYTECH · Based on RustDesk · AGPL-3.0',
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 12),
                           ),
                           Text(
                             translate('Slogan_tip'),
