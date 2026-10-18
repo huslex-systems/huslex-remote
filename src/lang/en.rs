@@ -290,5 +290,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("shortcut-already-bound-to", "Already bound to"),
         ("shortcut-mobile-physical-keyboard-tip", "Recording requires a physical keyboard. Soft keyboards are not supported."),
         ("shortcut-key-not-supported", "\"{}\" can't be used as a shortcut."),
+        ("length>=6", "at least 6 characters"),
     ].iter().cloned().collect();
 }

@@ -855,5 +855,6 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("This station is no longer available to you.", "Această stație nu mai este disponibilă pentru tine."),
         ("Something went wrong. Please try again in a moment.", "Ceva nu a mers. Încearcă din nou peste câteva momente."),
         ("Source code", "Cod sursă"),
+        ("length>=6", "minim 6 caractere"),
     ].iter().cloned().collect();
 }

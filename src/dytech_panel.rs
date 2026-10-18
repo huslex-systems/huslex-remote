@@ -14,7 +14,13 @@ use hbb_common::{
     log, password_security as ps,
 };
 use serde_json::{json, Value};
-use std::{sync::Once, time::Duration};
+use std::{
+    sync::{
+        atomic::{AtomicU8, Ordering},
+        Once,
+    },
+    time::Duration,
+};
 
 const PANEL: &str = "https://cp-remote.huslex.com";
 pub const LOCAL_ACTIVATE: &str = "dytech-activate";
@@ -115,6 +121,8 @@ pub fn start_heartbeat() {
     });
 }
 
+static REJECTED: AtomicU8 = AtomicU8::new(0);
+
 fn beat() {
     let raw = Config::get_option(OPT_TOKEN);
     if raw.is_empty() {
@@ -132,6 +140,7 @@ fn beat() {
         .send()
     {
         Ok(r) if r.status().is_success() => {
+            REJECTED.store(0, Ordering::SeqCst);
             // Panel answer: {"ok":true,"suspended":bool,"state":"free|trial|active|grace|paused"}.
             // An old panel without these fields means "not suspended".
             if let Ok(v) = r.json::<Value>() {
@@ -142,6 +151,18 @@ fn beat() {
                     if suspended { "Y" } else { "" }.to_owned(),
                 );
                 Config::set_option(OPT_STATE.to_owned(), state.to_owned());
+            }
+        }
+        Ok(r) if r.status().as_u16() == 403 => {
+            // The panel no longer knows this token (license regenerated / station removed).
+            // After 3 consecutive rejections (3 minutes) forget it, so the "Activate" card
+            // comes back and a new license can be entered.
+            let n = REJECTED.fetch_add(1, Ordering::SeqCst) + 1;
+            log::warn!("dytech heartbeat rejected (403), count {}", n);
+            if n >= 3 {
+                Config::set_option(OPT_TOKEN.to_owned(), "".to_owned());
+                Config::set_option(OPT_STATION.to_owned(), "".to_owned());
+                REJECTED.store(0, Ordering::SeqCst);
             }
         }
         Ok(r) => log::warn!("dytech heartbeat rejected: {}", r.status()),

@@ -926,12 +926,9 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
   final presetPassword = permanentPasswordSet && !localPasswordSet;
   var canSubmit = false;
   final RxString rxPass = "".obs;
+  // Dytech: any characters, minimum 6 (no upper/lower/digit/symbol rules).
   final rules = [
-    DigitValidationRule(),
-    UppercaseValidationRule(),
-    LowercaseValidationRule(),
-    // SpecialCharacterValidationRule(),
-    MinCharactersValidationRule(8),
+    MinCharactersValidationRule(6),
   ];
   final maxLength = bind.mainMaxEncryptLen();
   final statusTip = localPasswordSet
@@ -1022,11 +1019,7 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
                 ),
               ],
             ),
-            Row(
-              children: [
-                Expanded(child: PasswordStrengthIndicator(password: rxPass)),
-              ],
-            ).marginOnly(top: 2, bottom: showStatusTipOnMobile ? 2 : 8),
+            SizedBox(height: showStatusTipOnMobile ? 2.0 : 8.0),
             SizedBox(
               height: showStatusTipOnMobile ? 0.0 : 8.0,
             ),
