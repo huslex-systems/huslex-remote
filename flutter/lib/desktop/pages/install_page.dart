@@ -11,7 +11,7 @@ import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
-import 'package:path/path.dart';
+import 'package:path/path.dart' show join;
 import 'package:url_launcher/url_launcher_string.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -476,7 +476,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
 
   Future<void> _uninstall() async {
     final ok = await showDialog<bool>(
-      context: context,
+      context: this.context,
       builder: (c) => AlertDialog(
         title: Text(translate('Uninstall')),
         content: Text(translate(
