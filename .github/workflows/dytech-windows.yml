@@ -345,13 +345,13 @@ jobs:
           python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/Dytech-Remote.exe
           popd
           mkdir -p ./SignOutput
-          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/dytech-remote-${{ env.VERSION }}.exe
+          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/dytech-remote-${{ env.VERSION }}-install.exe
 
       - name: Upload Windows exe
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dytech-remote-windows-exe
-          path: ./SignOutput/dytech-remote-${{ env.VERSION }}.exe
+          path: ./SignOutput/dytech-remote-${{ env.VERSION }}-install.exe
           if-no-files-found: error
 
       - name: Add signed custom.txt (Dytech Remote Console config)
@@ -367,11 +367,11 @@ jobs:
           python3 ./generate.py -f ../../rustdesk/ -o . -e ../../rustdesk/Dytech-Remote-Console.exe
           popd
           mkdir -p ./SignOutput
-          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/dytech-remote-cpanel-${{ env.VERSION }}.exe
+          mv ./target/release/rustdesk-portable-packer.exe ./SignOutput/dytech-remote-cpanel-${{ env.VERSION }}-install.exe
 
       - name: Upload Windows exe (console)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dytech-remote-cpanel-windows-exe
-          path: ./SignOutput/dytech-remote-cpanel-${{ env.VERSION }}.exe
+          path: ./SignOutput/dytech-remote-cpanel-${{ env.VERSION }}-install.exe
           if-no-files-found: error

@@ -60,3 +60,16 @@ flutter/web/
 /third_party/libdrmtap/
 # Local git worktrees
 .worktrees/
+
+# Dytech: never commit secrets / private panel
+panel/
+tools/oracle/
+tools/vivobook/
+_private-keys/
+*password*.txt
+license.txt
+secrets.json
+*.db
+*.dmp
+*recovery*
+oracle-cloudhuslex*

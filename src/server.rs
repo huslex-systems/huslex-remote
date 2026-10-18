@@ -161,20 +161,7 @@ pub fn new() -> ServerPtr {
             server.add_service(Box::new(input_service::new_window_focus()));
         }
     }
-    #[cfg(all(target_os = "windows", feature = "flutter"))]
-    {
-        match printer_service::init(&crate::get_app_name()) {
-            Ok(()) => {
-                log::info!("printer service initialized");
-                server.add_service(Box::new(printer_service::new(
-                    printer_service::NAME.to_owned(),
-                )));
-            }
-            Err(e) => {
-                log::error!("printer service init failed: {}", e);
-            }
-        }
-    }
+    // Dytech: remote printer service disabled (its driver adapter can terminate the whole process on some PCs).
     // Terminal service is created per connection, not globally
     Arc::new(RwLock::new(server))
 }
@@ -676,6 +663,8 @@ pub async fn start_server(is_server: bool, no_server: bool) {
 
     if is_server {
         crate::common::set_server_running(true);
+        #[cfg(not(any(target_os = "android", target_os = "ios")))]
+        crate::dytech_panel::start_heartbeat();
         std::thread::spawn(move || {
             if let Err(err) = crate::ipc::start("") {
                 log::error!("Failed to start ipc: {}", err);

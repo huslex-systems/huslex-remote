@@ -246,6 +246,11 @@ pub fn get_builtin_option(key: &str) -> String {
 
 #[inline]
 pub fn set_local_option(key: String, value: String) {
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    if key == crate::dytech_panel::LOCAL_ACTIVATE {
+        crate::dytech_panel::start_activate(value);
+        return;
+    }
     LocalConfig::set_option(key.clone(), value);
 }
 

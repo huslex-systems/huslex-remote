@@ -75,11 +75,54 @@ fn make_tray() -> hbb_common::ResultType<()> {
         None
     };
     let open_i = MenuItem::new(translate("Open".to_owned()), true, None);
+    // Dytech: header (name, station/ID, version) and footer; the ID text is refreshed by a thread.
+    let title_i = MenuItem::new("dytech Remote", false, None);
+    let id_text: Arc<Mutex<String>> = Arc::new(Mutex::new("ID: …".to_owned()));
+    let id_i = MenuItem::new(id_text.lock().unwrap().clone(), false, None);
+    let ver_i = MenuItem::new(format!("Version {}", crate::VERSION), false, None);
+    let brand_i = MenuItem::new("Dytech", false, None);
+    {
+        let id_text = id_text.clone();
+        std::thread::spawn(move || {
+            let rt = hbb_common::tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .ok();
+            loop {
+                let id = crate::ipc::get_id();
+                let station = rt
+                    .as_ref()
+                    .map(|rt| rt.block_on(crate::ipc::get_option_async("dytech-station")))
+                    .unwrap_or_default();
+                if !id.is_empty() {
+                    let spaced = id
+                        .as_bytes()
+                        .chunks(3)
+                        .map(|c| String::from_utf8_lossy(c).to_string())
+                        .collect::<Vec<_>>()
+                        .join(" ");
+                    let t = if station.is_empty() {
+                        format!("ID: {}", spaced)
+                    } else {
+                        format!("{} · ID {}", station, spaced)
+                    };
+                    *id_text.lock().unwrap() = t;
+                }
+                std::thread::sleep(std::time::Duration::from_secs(5));
+            }
+        });
+    }
+    tray_menu
+        .append_items(&[&title_i, &id_i, &ver_i, &tray_icon::menu::PredefinedMenuItem::separator()])
+        .ok();
     if let Some(quit_i) = &quit_i {
         tray_menu.append_items(&[&open_i, quit_i]).ok();
     } else {
         tray_menu.append_items(&[&open_i]).ok();
     }
+    tray_menu
+        .append_items(&[&tray_icon::menu::PredefinedMenuItem::separator(), &brand_i])
+        .ok();
     let tooltip = |count: usize| {
         if count == 0 {
             format!(
@@ -184,6 +227,13 @@ fn make_tray() -> hbb_common::ResultType<()> {
 
                 let rl = CFRunLoopGetMain();
                 CFRunLoopWakeUp(rl);
+            }
+        }
+
+        {
+            let t = id_text.lock().unwrap().clone();
+            if t != id_i.text() {
+                id_i.set_text(t);
             }
         }
 
