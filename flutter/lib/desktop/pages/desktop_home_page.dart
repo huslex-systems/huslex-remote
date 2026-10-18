@@ -14,6 +14,7 @@ import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_tab_page.dart';
 import 'package:flutter_hbb/desktop/widgets/update_progress.dart';
 import 'package:flutter_hbb/desktop/widgets/dytech_activate.dart';
+import 'package:flutter_hbb/desktop/widgets/dytech_console.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/server_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
@@ -66,7 +67,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       children: [
         buildLeftPane(context),
         if (!isIncomingOnly) const VerticalDivider(width: 1),
-        if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
+        if (!isIncomingOnly)
+          Expanded(
+              child: bind.isOutgoingOnly()
+                  ? const DytechConsoleHome()
+                  : buildRightPane(context)),
       ],
     ));
   }
