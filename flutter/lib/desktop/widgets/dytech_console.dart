@@ -49,28 +49,38 @@ Future<_Res> _call(String method, String path,
 }
 
 /// Plain-language text for every failure the user can meet.
+/// Each message ends with a short code (Exx) so we can tell exactly what happened
+/// when someone reports it. Codes: E01 no connection, E02 wrong data, E03 locked,
+/// E04 password must be chosen first, E05 session ended, E06 subscription paused,
+/// E07 station gone, E08 missing fields, E09 other (with the server status number).
 String _friendly(_Res r) {
+  String m(String text, String code) => '${translate(text)} ($code)';
   if (r.status == 0 || r.error == 'network') {
-    return translate(
-        'Cannot reach the server. Check your internet connection and try again.');
+    return m('Cannot reach the server. Check your internet connection and try again.', 'E01');
   }
   switch (r.error) {
     case 'bad':
-      return translate(
-          'Wrong username, password or code. Please check them and try again.');
+      return m('Wrong username, password or code. Please check them and try again.', 'E02');
     case 'locked':
-      return translate('Too many attempts. Please wait 15 minutes and try again.');
+      return m('Too many attempts. Please wait 15 minutes and try again.', 'E03');
     case 'must_change':
-      return translate(
-          'Sign in once at Remote Center in your browser and choose your own password, then come back here.');
+      return m(
+          'Sign in once at Remote Center in your browser and choose your own password, then come back here.',
+          'E04');
     case 'expired':
-      return translate('Your session has ended. Please sign in again.');
+      return m('Your session has ended. Please sign in again.', 'E05');
     case 'paused':
-      return translate("This customer's subscription is paused.");
+      return m("This customer's subscription is paused.", 'E06');
     case 'notfound':
-      return translate('This station is no longer available to you.');
+      return m('This station is no longer available to you.', 'E07');
   }
-  return translate('Something went wrong. Please try again in a moment.');
+  if (r.status == 401) {
+    return m('Your session has ended. Please sign in again.', 'E05');
+  }
+  if (r.status == 404) {
+    return m('This station is no longer available to you.', 'E07');
+  }
+  return m('Something went wrong. Please try again in a moment.', 'E09-${r.status}');
 }
 
 class DytechConsoleHome extends StatefulWidget {
@@ -164,8 +174,7 @@ class _LoginViewState extends State<_LoginView> {
     final p = _pass.text;
     final c = _code.text.trim();
     if (u.isEmpty || p.isEmpty || c.length != 6) {
-      setState(() => _error = translate(
-          'Please enter your username, your password and the 6-digit code from your authenticator app.'));
+      setState(() => _error = '${translate('Please enter your username, your password and the 6-digit code from your authenticator app.')} (E08)');
       return;
     }
     setState(() {
