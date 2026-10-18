@@ -1,4 +1,5 @@
 name: Dytech Remote - Windows build
+run-name: "Dytech Remote ${{ github.ref_name }} - run #${{ github.run_number }}"
 
 on:
   workflow_dispatch:

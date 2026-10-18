@@ -4,6 +4,55 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+
+const String kDytechPanelUrl = 'https://cp-remote.huslex.com';
+
+/// Dytech release number shown in About and in the installer (the RustDesk base version stays 1.5.1).
+const int kDytechBuild = 4;
+
+/// Dialog with a QR code that opens the Remote Center on the phone (installable as an app).
+void showDytechPhoneDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (c) => AlertDialog(
+      title: Text(translate('Phone app')),
+      content: SizedBox(
+        width: 280,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(translate('Scan with your phone camera to open Remote Center. Then choose "Install app" or "Add to Home Screen".'),
+                style: const TextStyle(fontSize: 13)),
+            const SizedBox(height: 14),
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.all(10),
+              child: QrImageView(
+                data: kDytechPanelUrl,
+                size: 200,
+                backgroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: () => launchUrlString(kDytechPanelUrl),
+              child: const Text('cp-remote.huslex.com',
+                  style: TextStyle(
+                      fontSize: 13, decoration: TextDecoration.underline)),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.of(c).pop(),
+            child: Text(translate('Close'))),
+      ],
+    ),
+  );
+}
 
 class DytechQuickBar extends StatelessWidget {
   const DytechQuickBar({Key? key}) : super(key: key);
@@ -29,6 +78,13 @@ class DytechQuickBar extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
+        IconButton(
+          tooltip: translate('Phone app'),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          icon: Icon(Icons.qr_code_2_rounded, size: 18, color: muted),
+          onPressed: () => showDytechPhoneDialog(context),
+        ),
         PopupMenuButton<String>(
           tooltip: translate('Theme'),
           padding: EdgeInsets.zero,

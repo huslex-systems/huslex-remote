@@ -2731,6 +2731,44 @@ pub fn main_get_common(key: String) -> String {
         };
         #[cfg(not(target_os = "linux"))]
         return String::new();
+    } else if key.starts_with("dytech-log:") {
+        // Technical error codes go to the application log, never on screen.
+        let msg: String = key["dytech-log:".len()..]
+            .chars()
+            .filter(|c| !c.is_control())
+            .take(160)
+            .collect();
+        log::warn!("dytech: {}", msg);
+        return "ok".to_owned();
+    } else if key == "dytech-install-info" {
+        #[cfg(target_os = "windows")]
+        {
+            let installed = crate::platform::is_installed();
+            let (_, path, _, _) = crate::platform::get_install_info();
+            let v = crate::platform::get_reg("Version");
+            let b = crate::platform::get_reg("BuildDate");
+            return serde_json::json!({
+                "installed": installed,
+                "version": v,
+                "build": b,
+                "path": path,
+                "this_version": crate::VERSION,
+                "this_build": crate::BUILD_DATE,
+            })
+            .to_string();
+        }
+        #[cfg(not(target_os = "windows"))]
+        return String::new();
+    } else if key == "dytech-uninstall" {
+        #[cfg(target_os = "windows")]
+        {
+            return match crate::platform::uninstall_me(false) {
+                Ok(_) => "ok".to_owned(),
+                Err(e) => format!("error:{}", e),
+            };
+        }
+        #[cfg(not(target_os = "windows"))]
+        return "error:unsupported".to_owned();
     } else if key == "permanent-password-set" {
         return ui_interface::is_permanent_password_set().to_string();
     } else if key == "local-permanent-password-set" {

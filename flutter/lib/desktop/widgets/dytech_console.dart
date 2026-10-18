@@ -53,8 +53,15 @@ Future<_Res> _call(String method, String path,
 /// when someone reports it. Codes: E01 no connection, E02 wrong data, E03 locked,
 /// E04 password must be chosen first, E05 session ended, E06 subscription paused,
 /// E07 station gone, E08 missing fields, E09 other (with the server status number).
-String _friendly(_Res r) {
-  String m(String text, String code) => '${translate(text)} ($code)';
+// Friendly text on screen; the technical code goes only to the application log.
+String _friendly(_Res r, {bool login = false}) {
+  String m(String text, String code) {
+    try {
+      bind.mainGetCommon(key: 'dytech-log:console $code status=${r.status} err=${r.error}');
+    } catch (_) {}
+    return translate(text);
+  }
+
   if (r.status == 0 || r.error == 'network') {
     return m('Cannot reach the server. Check your internet connection and try again.', 'E01');
   }
@@ -76,6 +83,9 @@ String _friendly(_Res r) {
   }
   if (r.status == 401) {
     return m('Your session has ended. Please sign in again.', 'E05');
+  }
+  if (r.status == 404 && login) {
+    return m('The service is not available right now. Please contact your administrator.', 'E10');
   }
   if (r.status == 404) {
     return m('This station is no longer available to you.', 'E07');
@@ -174,7 +184,8 @@ class _LoginViewState extends State<_LoginView> {
     final p = _pass.text;
     final c = _code.text.trim();
     if (u.isEmpty || p.isEmpty || c.length != 6) {
-      setState(() => _error = '${translate('Please enter your username, your password and the 6-digit code from your authenticator app.')} (E08)');
+      setState(() => _error = translate('Please enter your username, your password and the 6-digit code from your authenticator app.'));
+      bind.mainGetCommon(key: 'dytech-log:console E08 missing fields');
       return;
     }
     setState(() {
@@ -199,7 +210,7 @@ class _LoginViewState extends State<_LoginView> {
     }
     setState(() {
       _busy = false;
-      _error = _friendly(r);
+      _error = _friendly(r, login: true);
       _code.clear();
     });
   }

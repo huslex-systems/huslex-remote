@@ -1,8 +1,12 @@
+// Dytech: installer window. Detects an existing installation and offers
+// Install / Update / Reinstall / Uninstall with plain, corporate wording.
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
+import 'package:flutter_hbb/desktop/widgets/dytech_quick.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
@@ -72,6 +76,13 @@ class _InstallPageBodyState extends State<_InstallPageBody>
   final RxBool btnEnabled = true.obs;
   final RxBool cancelEnabled = true.obs;
 
+  // Existing installation (null until known / not installed).
+  final Rx<Map<String, dynamic>?> info = Rx<Map<String, dynamic>?>(null);
+  final RxBool infoLoaded = false.obs;
+  final RxString message = ''.obs;
+  final RxBool messageIsError = false.obs;
+  final RxBool finished = false.obs;
+
   // todo move to theme.
   final buttonStyle = OutlinedButton.styleFrom(
     textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.normal),
@@ -84,6 +95,32 @@ class _InstallPageBodyState extends State<_InstallPageBody>
     startmenu.value = installOptions['STARTMENUSHORTCUTS'] != '0';
     desktopicon.value = installOptions['DESKTOPSHORTCUTS'] != '0';
     printer.value = installOptions['PRINTER'] == '1';
+  }
+
+  Future<void> _loadInfo() async {
+    try {
+      final s = await bind.mainGetCommon(key: 'dytech-install-info');
+      if (s.isNotEmpty) {
+        final m = jsonDecode(s);
+        if (m is Map<String, dynamic>) info.value = m;
+      }
+    } catch (e) {
+      debugPrint('install info failed: $e');
+    }
+    infoLoaded.value = true;
+  }
+
+  /// new | update | same | newer
+  String get mode {
+    final m = info.value;
+    if (m == null || m['installed'] != true) return 'new';
+    final inst = '${m['build'] ?? ''}';
+    final cur = '${m['this_build'] ?? ''}';
+    if (inst.isEmpty || cur.isEmpty) return 'update';
+    final c = cur.compareTo(inst);
+    if (c > 0) return 'update';
+    if (c < 0) return 'newer';
+    return 'same';
   }
 
   Future<void> _loadPrinterStatus() async {
@@ -110,6 +147,7 @@ class _InstallPageBodyState extends State<_InstallPageBody>
   void initState() {
     windowManager.addListener(this);
     super.initState();
+    _loadInfo();
     if (printer.value) {
       _loadPrinterStatus();
     }
@@ -131,7 +169,6 @@ class _InstallPageBodyState extends State<_InstallPageBody>
 
   InkWell Option(RxBool option, {String label = ''}) {
     return InkWell(
-      // todo mouseCursor: "SystemMouseCursors.forbidden" or no cursor on btnEnabled == false
       borderRadius: BorderRadius.circular(6),
       onTap: () => btnEnabled.value ? option.value = !option.value : null,
       child: Row(
@@ -152,6 +189,85 @@ class _InstallPageBodyState extends State<_InstallPageBody>
     );
   }
 
+  Widget _statusCard(BuildContext context, bool isDarkTheme) {
+    final m = mode;
+    if (m == 'new') {
+      return const SizedBox.shrink();
+    }
+    final inst = info.value ?? {};
+    late final IconData icon;
+    late final String title;
+    late final String detail;
+    final installedBuild = '${inst['build'] ?? ''}';
+    final thisBuild = '${inst['this_build'] ?? ''}';
+    final version = '${inst['version'] ?? ''}';
+    switch (m) {
+      case 'update':
+        icon = Icons.system_update_alt_rounded;
+        title = translate('An older version is installed');
+        detail =
+            '${translate('Installed')}: $version ($installedBuild)\n${translate('This installer')}: ${inst['this_version'] ?? ''} · build $kDytechBuild ($thisBuild)';
+        break;
+      case 'newer':
+        icon = Icons.info_outline_rounded;
+        title = translate('A newer version is already installed');
+        detail =
+            '${translate('Installed')}: $version ($installedBuild)\n${translate('This installer')}: ${inst['this_version'] ?? ''} · build $kDytechBuild ($thisBuild)';
+        break;
+      default:
+        icon = Icons.check_circle_outline_rounded;
+        title = translate('Already installed and up to date');
+        detail = '${translate('Installed')}: $version ($installedBuild)';
+    }
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: MyTheme.accent.withOpacity(isDarkTheme ? 0.16 : 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: MyTheme.accent.withOpacity(0.5)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 30, color: MyTheme.accent).marginOnly(right: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(detail, style: const TextStyle(fontSize: 12.5)),
+                const SizedBox(height: 4),
+                Text(
+                    '${translate('Install location')}: ${inst['path'] ?? controller.text}',
+                    style: const TextStyle(fontSize: 12.5)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _compat(BuildContext context) {
+    final muted = Theme.of(context).textTheme.bodySmall?.color;
+    return Row(
+      children: [
+        Icon(Icons.verified_outlined, size: 16, color: muted)
+            .marginOnly(right: 8),
+        Expanded(
+          child: Text(
+            translate(
+                'Compatible with Windows 10 and Windows 11 (64-bit): Home, Pro, Enterprise and Education.'),
+            style: TextStyle(fontSize: 12, color: muted),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final double em = 13;
@@ -159,63 +275,89 @@ class _InstallPageBodyState extends State<_InstallPageBody>
     return Scaffold(
         backgroundColor: null,
         body: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(translate('Installation'),
-                  style: Theme.of(context).textTheme.headlineMedium),
-              Row(
-                children: [
-                  Text('${translate('Installation Path')}:')
-                      .marginOnly(right: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: controller,
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        contentPadding: EdgeInsets.all(0.75 * em),
-                      ),
-                    ).workaroundFreezeLinuxMint().marginOnly(right: 10),
-                  ),
-                  Obx(
-                    () => OutlinedButton.icon(
-                      icon: Icon(Icons.folder_outlined, size: 16),
-                      onPressed: btnEnabled.value ? selectInstallPath : null,
-                      style: buttonStyle,
-                      label: Text(translate('Change Path')),
-                    ),
-                  )
-                ],
-              ).marginSymmetric(vertical: 2 * em),
-              Option(startmenu, label: 'Create start menu shortcuts')
-                  .marginOnly(bottom: 7),
-              Option(desktopicon, label: 'Create desktop icon')
-                  .marginOnly(bottom: 7),
-              Option(printer, label: 'Install {$appName} Printer'),
-              Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDarkTheme
-                        ? Color.fromARGB(135, 87, 87, 90)
-                        : Colors.grey[100],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline_rounded, size: 32)
-                          .marginOnly(right: 16),
-                      Column(
+          child: Obx(() {
+            final m = infoLoaded.value ? mode : 'new';
+            final existing = m != 'new';
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    loadIcon(40).marginOnly(right: 14),
+                    Expanded(
+                      child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(translate('agreement_tip'))
-                              .marginOnly(bottom: em),
-                          InkWell(
-                            hoverColor: Colors.transparent,
-                            onTap: () => launchUrlString(
-                                'https://rustdesk.com/privacy.html'),
-                            child: Tooltip(
-                              message: 'https://rustdesk.com/privacy.html',
+                          Text(appName,
+                              style:
+                                  Theme.of(context).textTheme.headlineMedium),
+                          Text(
+                              translate(existing
+                                  ? 'Manage this installation'
+                                  : 'Setup'),
+                              style: Theme.of(context).textTheme.bodySmall),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 1.6 * em),
+                if (existing) _statusCard(context, isDarkTheme),
+                if (existing) SizedBox(height: 1.2 * em),
+                Row(
+                  children: [
+                    Text('${translate('Installation Path')}:')
+                        .marginOnly(right: 10),
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          contentPadding: EdgeInsets.all(0.75 * em),
+                        ),
+                      ).workaroundFreezeLinuxMint().marginOnly(right: 10),
+                    ),
+                    if (!existing)
+                      Obx(
+                        () => OutlinedButton.icon(
+                          icon: Icon(Icons.folder_outlined, size: 16),
+                          onPressed:
+                              btnEnabled.value ? selectInstallPath : null,
+                          style: buttonStyle,
+                          label: Text(translate('Change Path')),
+                        ),
+                      )
+                  ],
+                ).marginSymmetric(vertical: 1.2 * em),
+                if (!existing) ...[
+                  Option(startmenu, label: 'Create start menu shortcuts')
+                      .marginOnly(bottom: 7),
+                  Option(desktopicon, label: 'Create desktop icon')
+                      .marginOnly(bottom: 7),
+                  Option(printer, label: 'Install {$appName} Printer'),
+                ],
+                Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDarkTheme
+                          ? Color.fromARGB(135, 87, 87, 90)
+                          : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, size: 32)
+                            .marginOnly(right: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(translate('agreement_tip'))
+                                .marginOnly(bottom: em),
+                            InkWell(
+                              hoverColor: Colors.transparent,
+                              onTap: () =>
+                                  launchUrlString('https://dytech.ro'),
                               child: Row(children: [
                                 Icon(Icons.launch_outlined, size: 16)
                                     .marginOnly(right: 5),
@@ -226,54 +368,90 @@ class _InstallPageBodyState extends State<_InstallPageBody>
                                 )
                               ]),
                             ),
-                          ),
-                        ],
-                      )
-                    ],
-                  )).marginSymmetric(vertical: 2 * em),
-              Row(
-                children: [
-                  Expanded(
-                    // NOT use Offstage to wrap LinearProgressIndicator
-                    child: Obx(() => showProgress.value
-                        ? LinearProgressIndicator().marginOnly(right: 10)
-                        : Offstage()),
-                  ),
-                  Obx(
-                    () => OutlinedButton.icon(
-                      icon: Icon(Icons.close_rounded, size: 16),
-                      label: Text(translate('Cancel')),
-                      onPressed: cancelEnabled.value
-                          ? () => windowManager.close()
-                          : null,
-                      style: buttonStyle,
-                    ).marginOnly(right: 10),
-                  ),
-                  Obx(
-                    () => ElevatedButton.icon(
-                      icon: Icon(Icons.done_rounded, size: 16),
-                      label: Text(translate('Accept and Install')),
-                      onPressed: btnEnabled.value ? install : null,
-                      style: buttonStyle,
+                          ],
+                        )
+                      ],
+                    )).marginSymmetric(vertical: 1.2 * em),
+                Obx(() => message.value.isEmpty
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: Text(
+                          message.value,
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: messageIsError.value
+                                  ? Theme.of(context).colorScheme.error
+                                  : null),
+                        ),
+                      )),
+                Row(
+                  children: [
+                    Expanded(
+                      // NOT use Offstage to wrap LinearProgressIndicator
+                      child: Obx(() => showProgress.value
+                          ? LinearProgressIndicator().marginOnly(right: 10)
+                          : Offstage()),
                     ),
-                  ),
-                  Offstage(
-                    offstage: bind.installShowRunWithoutInstall(),
-                    child: Obx(
+                    Obx(
                       () => OutlinedButton.icon(
-                        icon: Icon(Icons.screen_share_outlined, size: 16),
-                        label: Text(translate('Run without install')),
-                        onPressed: btnEnabled.value
-                            ? () => bind.installRunWithoutInstall()
+                        icon: Icon(Icons.close_rounded, size: 16),
+                        label: Text(translate(finished.value ? 'Close' : 'Cancel')),
+                        onPressed: cancelEnabled.value
+                            ? () => windowManager.close()
                             : null,
                         style: buttonStyle,
-                      ).marginOnly(left: 10),
+                      ).marginOnly(right: 10),
                     ),
-                  ),
-                ],
-              )
-            ],
-          ).paddingSymmetric(horizontal: 4 * em, vertical: 3 * em),
+                    if (existing)
+                      Obx(
+                        () => OutlinedButton.icon(
+                          icon: Icon(Icons.delete_outline_rounded, size: 16),
+                          label: Text(translate('Uninstall')),
+                          onPressed: btnEnabled.value && !finished.value
+                              ? _uninstall
+                              : null,
+                          style: buttonStyle,
+                        ).marginOnly(right: 10),
+                      ),
+                    Obx(
+                      () => ElevatedButton.icon(
+                        icon: Icon(
+                            m == 'update'
+                                ? Icons.system_update_alt_rounded
+                                : (existing
+                                    ? Icons.restart_alt_rounded
+                                    : Icons.done_rounded),
+                            size: 16),
+                        label: Text(translate(m == 'update'
+                            ? 'Update'
+                            : (existing ? 'Reinstall' : 'Accept and Install'))),
+                        onPressed: btnEnabled.value && !finished.value
+                            ? install
+                            : null,
+                        style: buttonStyle,
+                      ),
+                    ),
+                    Offstage(
+                      offstage: existing || bind.installShowRunWithoutInstall(),
+                      child: Obx(
+                        () => OutlinedButton.icon(
+                          icon: Icon(Icons.screen_share_outlined, size: 16),
+                          label: Text(translate('Run without install')),
+                          onPressed: btnEnabled.value
+                              ? () => bind.installRunWithoutInstall()
+                              : null,
+                          style: buttonStyle,
+                        ).marginOnly(left: 10),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 1.4 * em),
+                _compat(context),
+              ],
+            ).paddingSymmetric(horizontal: 4 * em, vertical: 2.4 * em);
+          }),
         ));
   }
 
@@ -282,6 +460,10 @@ class _InstallPageBodyState extends State<_InstallPageBody>
       btnEnabled.value = false;
       cancelEnabled.value = false;
       showProgress.value = true;
+      message.value = translate(mode == 'new'
+          ? 'Installing, please wait…'
+          : 'Updating, please wait…');
+      messageIsError.value = false;
       String args = '';
       if (startmenu.value) args += ' startmenu';
       if (desktopicon.value) args += ' desktopicon';
@@ -290,6 +472,53 @@ class _InstallPageBodyState extends State<_InstallPageBody>
     }
 
     do_install();
+  }
+
+  Future<void> _uninstall() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(translate('Uninstall')),
+        content: Text(translate(
+            'Remote access to this computer will stop. Do you want to uninstall?')),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.of(c).pop(false),
+              child: Text(translate('Cancel'))),
+          TextButton(
+              onPressed: () => Navigator.of(c).pop(true),
+              child: Text(translate('Uninstall'))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    btnEnabled.value = false;
+    cancelEnabled.value = false;
+    showProgress.value = true;
+    message.value = translate('Uninstalling, please wait…');
+    messageIsError.value = false;
+    String r = '';
+    try {
+      r = await bind.mainGetCommon(key: 'dytech-uninstall');
+    } catch (e) {
+      r = 'error:$e';
+    }
+    showProgress.value = false;
+    cancelEnabled.value = true;
+    if (r == 'ok') {
+      finished.value = true;
+      message.value = translate('Uninstalled successfully. You can close this window.');
+      messageIsError.value = false;
+    } else {
+      btnEnabled.value = true;
+      message.value =
+          translate('Could not uninstall. Close the application and try again.');
+      try {
+        bind.mainGetCommon(key: 'dytech-log:installer U01 uninstall failed: ${r.length > 100 ? r.substring(0, 100) : r}');
+      } catch (_) {}
+      messageIsError.value = true;
+      debugPrint('uninstall failed: $r');
+    }
   }
 
   void selectInstallPath() async {

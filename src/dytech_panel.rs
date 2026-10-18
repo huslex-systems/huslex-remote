@@ -56,11 +56,11 @@ pub fn start_activate(license: String) {
 
 fn activate(license: &str) -> Result<(), String> {
     if license.len() < 8 {
-        return Err("Enter the license key.".into());
+        return Err("Please enter the license key.".into());
     }
     let id = crate::ui_interface::get_id();
     if id.is_empty() {
-        return Err("The service is not ready yet. Try again in a moment.".into());
+        return Err("The service is still starting. Please try again in a moment.".into());
     }
     let host = crate::common::whoami_hostname();
     let client = crate::hbbs_http::create_http_client_with_url(PANEL);
@@ -69,27 +69,27 @@ fn activate(license: &str) -> Result<(), String> {
         .timeout(Duration::from_secs(20))
         .json(&json!({ "license": license, "id": id, "hostname": host }))
         .send()
-        .map_err(|_| "Cannot reach the control panel. Check the internet connection.".to_owned())?;
+        .map_err(|_| "Cannot reach Remote Center. Check this computer's internet connection and try again.".to_owned())?;
     let code = resp.status().as_u16();
     if code != 200 {
         return Err(match code {
-            403 => "Invalid or already used license.",
-            429 => "Too many attempts. Try again later.",
-            400 => "The request was rejected.",
-            _ => "The control panel returned an error.",
+            403 => "This license is not valid or was already used. Ask your provider for a new license.",
+            429 => "Too many attempts. Please wait a few minutes and try again.",
+            400 => "The license could not be read. Check it and try again.",
+            _ => "Remote Center is not available right now. Please try again later.",
         }
         .into());
     }
-    let body: Value = resp.json().map_err(|_| "Unexpected panel response.".to_owned())?;
+    let body: Value = resp.json().map_err(|_| "Remote Center answered in an unexpected way. Please try again later.".to_owned())?;
     let password = body.get("password").and_then(|v| v.as_str()).unwrap_or("");
     let token = body.get("token").and_then(|v| v.as_str()).unwrap_or("");
     if password.is_empty() || token.is_empty() {
-        return Err("Unexpected panel response.".into());
+        return Err("Remote Center answered in an unexpected way. Please try again later.".into());
     }
     // NOTE: the license is consumed by the panel at this point. If one of the steps below fails,
     // generate a new license for the station in the panel (menu > New license).
     if !crate::ui_interface::set_permanent_password_with_result(password.to_owned()) {
-        return Err("Could not apply the access password. Ask for a new license.".into());
+        return Err("Activation could not be completed. Ask your provider for a new license.".into());
     }
     crate::ui_interface::set_option(
         OPT_TOKEN.to_owned(),
